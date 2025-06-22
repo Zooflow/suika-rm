@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    
+    <title>Suika RM Game</title>
+    <style>
+        * {
+          -webkit-touch-callout: none;
+          -webkit-user-select: none;
+          -khtml-user-select: none;
+          -moz-user-select: none;
+          -ms-user-select: none;
+          user-select: none;
+          -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+          background-image: linear-gradient(to bottom, #6f4d36, #6b4a34, #664732, #624430, #5e412e, #5a3e2c, #563c2a, #523928, #4d3626, #493324, #443022, #402d20);
+          font-family: 'Arial', sans-serif;
+          overflow-x: hidden;
+          touch-action: manipulation;
+          overscroll-behavior: none;
+        }
+        
+        .hearts {
+          position: fixed;
+          width: 100vw;
+          height: 100vh;
+          pointer-events: none;
+          overflow: hidden;
+          z-index: 1;
+        }
+        
+        .heart {
+          position: absolute;
+          font-size: clamp(16px, 4vw, 24px);
+          color: rgba(139, 69, 19, 0.3);
+          animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+          0%, 100% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+          10% { opacity: 1; }
+          90% { opacity: 1; }
+          100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
+        }
+
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-5px); }
+          75% { transform: translateX(5px); }
+        }
+
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.1); }
+        }
+
+        @keyframes scorePopup {
+          0% { transform: scale(0) rotate(-12deg); opacity: 0; }
+          50% { transform: scale(1.2) rotate(0deg); opacity: 1; }
+          100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+
+        .shake {
+          animation: shake 0.3s ease-in-out;
+        }
+
+        .score-popup {
+          animation: scorePopup 0.5s ease-out;
+        }
+        
+        .game-container {
+          background: linear-gradient(145deg, #f8f9ff, #e8e9ff);
+          border: 4px solid #996d4f;
+          border-radius: 20px;
+          box-shadow: 
+            0 20px 40px rgba(184, 103, 103, 0.3),
+            inset 0 2px 4px rgba(255, 255, 255, 0.6);
+          position: relative;
+          overflow: hidden;
+          touch-action: manipulation;
+          transition: transform 0.1s ease;
+        }
+        
+        .game-container::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: linear-gradient(45deg, 
+            rgba(165, 112, 70, 0.1) 0%,
+            rgba(120, 70, 40, 0.1) 50%,
+            rgba(165, 112, 70, 0.1) 100%
+          );
+          pointer-events: none;
+          z-index: 1;
+        }
+        
+        #game-canvas {
+          border-radius: 16px;
+          position: relative;
+          z-index: 2;
+          display: block;
+          touch-action: none;
+        }
+        
+        .score-container {
+          background-image: linear-gradient(to bottom, #6f4d36, #6b4a34, #664732, #624430, #5e412e, #5a3e2c, #563c2a, #523928, #4d3626, #493324, #443022, #402d20);
+          border-radius: 20px;
+          padding: 20px;
+          box-shadow: 0 10px 30px rgba(56, 29, 29, 0.4);
+          border: 2px solid rgba(255, 255, 255, 0.3);
+          backdrop-filter: blur(10px);
+          transition: transform 0.2s ease;
+        }
+        
+        .btn-restart {
+          background-image: linear-gradient(to bottom, #a98265, #976e52, #8d5f45, #834f38, #7a402d);
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 15px rgba(189, 99, 99, 0.4);
+          touch-action: manipulation;
+        }
+        
+        .btn-restart:hover, .btn-restart:active {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(189, 99, 99, 0.6);
+        }
+        
+        .main-container {
+          min-height: 100vh;
+          min-height: 100dvh;
+          padding: 1rem;
+          position: relative;
+          z-index: 2;
+        }
+        
+        @media (max-width: 480px) {
+          .main-container {
+            padding: 0.5rem;
+          }
+          
+          .game-container {
+            border-width: 2px;
+            border-radius: 15px;
+          }
+          
+          .score-container {
+            padding: 15px;
+            border-radius: 15px;
+          }
+        }
+      </style>
+</head>
+<body>
+  <!-- Corazones flotantes -->
+  <div class="hearts">
+    <div class="heart" style="left: 10%; animation-delay: 0s;">🤎</div>
+    <div class="heart" style="left: 20%; animation-delay: 1s;">🤎</div>
+    <div class="heart" style="left: 30%; animation-delay: 2s;">🤎</div>
+    <div class="heart" style="left: 40%; animation-delay: 3s;">🤎</div>
+    <div class="heart" style="left: 50%; animation-delay: 4s;">🤎</div>
+    <div class="heart" style="left: 60%; animation-delay: 0.5s;">🤎</div>
+    <div class="heart" style="left: 70%; animation-delay: 1.5s;">🤎</div>
+    <div class="heart" style="left: 80%; animation-delay: 2.5s;">🤎</div>
+    <div class="heart" style="left: 90%; animation-delay: 3.5s;">🤎</div>
+  </div>
+  
+  <div class="main-container flex items-center justify-center">
+    <div class="flex flex-col items-center gap-4 sm:gap-6 max-w-sm w-full">
+      <!-- Título -->
+      <div class="text-center">
+        <h1 class="text-3xl sm:text-4xl font-bold text-white mb-2 drop-shadow-lg">
+          RM Suika Game
+        </h1>
+      </div>
+      
+      <!-- Score y controles -->
+      <div id="score-container" class="score-container text-center text-white w-full">
+        <div id="score" class="text-2xl sm:text-3xl font-bold mb-3">Puntaje: 0</div>
+        <button id="restart-btn" class="btn-restart px-6 py-3 text-white font-semibold rounded-full w-full sm:w-auto">
+          Reiniciar
+        </button>
+      </div>
+      
+      <!-- Contenedor del juego -->
+      <div id="game-container" class="game-container w-full max-w-xs aspect-[3/5] relative">
+        <canvas id="game-canvas" class="w-full h-full block"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let score = 0;
+    let gameOver = false;
+    let nextLevel = 1;
+    let previewX = 150;
+    let canvasRect = null;
+    let particles = [];
+    let screenShakeTimer = 0;
+    let screenShakeIntensity = 0;
+    let soundEnabled = true;
+    let audioContext = null;
+
+    const images = {};
+    const maxLevel = 7;
+
+    // Cargar imágenes con fallback
+    for (let i = 1; i <= maxLevel; i++) {
+      const img = new Image();
+      img.src = `assets/rm/rm${i}.jpg`;
+      img.onerror = () => {
+        console.log(`Imagen rm${i}.jpg no encontrada, usando fallback`);
+      };
+      images[i] = img;
+    }
+
+    const canvas = document.getElementById("game-canvas");
+    const ctx = canvas.getContext("2d");
+
+    // Sistema de audio Web Audio API
+    function initAudio() {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function createTone(frequency, duration, type = 'sine', volume = 0.1) {
+      if (!soundEnabled || !audioContext) return;
+      
+      try {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+        oscillator.type = type;
+        
+        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(volume, audioContext.currentTime + 0.01);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + duration);
+      } catch (e) {
+        console.log('Error creating audio:', e);
+      }
+    }
+
+    // Crear sonidos más complejos
+    function createComplexSound(frequencies, duration, type = 'sine', volume = 0.1) {
+      if (!soundEnabled || !audioContext) return;
+      
+      frequencies.forEach((freq, index) => {
+        setTimeout(() => {
+          createTone(freq, duration / frequencies.length, type, volume);
+        }, index * (duration * 1000) / frequencies.length / 2);
+      });
+    }
+
+    // Configuración responsive del canvas
+    function setupCanvas() {
+      const container = canvas.parentElement;
+      const containerRect = container.getBoundingClientRect();
+      
+      canvas.width = Math.floor(containerRect.width * window.devicePixelRatio);
+      canvas.height = Math.floor(containerRect.height * window.devicePixelRatio);
+      
+      canvas.style.width = containerRect.width + 'px';
+      canvas.style.height = containerRect.height + 'px';
+      
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      
+      canvasRect = canvas.getBoundingClientRect();
+      previewX = containerRect.width / 2;
+    }
+
+    const gravity = 0.4;
+    const friction = 0.98;
+    const bounceDamping = 0.3;
+
+    const levelRadii = {
+      1: 16, 2: 22, 3: 28, 4: 35, 5: 42, 6: 50, 7: 58
+    };
+
+    const levelColors = [
+      "#ff9999", "#ffcc99", "#ffff99", "#ccff99", 
+      "#99ffcc", "#99ccff", "#cc99ff"
+    ];
+
+    const rms = [];
+    let dropCooldown = 0;
+
+    // Sistema de partículas
+    class Particle {
+      constructor(x, y, color, size = 3) {
+        this.x = x;
+        this.y = y;
+        this.vx = (Math.random() - 0.5) * 8;
+        this.vy = (Math.random() - 0.5) * 8 - 2;
+        this.color = color;
+        this.size = size;
+        this.life = 1.0;
+        this.decay = 0.02 + Math.random() * 0.02;
+        this.gravity = 0.1;
+      }
+
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += this.gravity;
+        this.vx *= 0.99;
+        this.life -= this.decay;
+        this.size *= 0.98;
+      }
+
+      draw(ctx) {
+        ctx.globalAlpha = this.life;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+
+      isDead() {
+        return this.life <= 0 || this.size <= 0.5;
+      }
+    }
+
+    // Crear explosión de partículas
+    function createParticleExplosion(x, y, color, count = 8) {
+      for (let i = 0; i < count; i++) {
+        particles.push(new Particle(x, y, color, 2 + Math.random() * 4));
+      }
+    }
+
+    // Crear partículas de impacto
+    function createImpactParticles(x, y, color, count = 1) {
+      for (let i = 0; i < count; i++) {
+        particles.push(new Particle(x, y, color, 1 + Math.random() * 2));
+      }
+    }
+
+    // Screen shake
+    function addScreenShake(intensity = 5, duration = 20) {
+      screenShakeTimer = Math.max(screenShakeTimer, duration);
+      screenShakeIntensity = Math.max(screenShakeIntensity, intensity);
+    }
+
+    // Efectos de sonido mejorados
+    function playSound(type, level = 1) {
+      if (!soundEnabled) return;
+      
+      // Inicializar audio context en primera interacción
+      if (!audioContext) {
+        initAudio();
+      }
+      
+      // Vibración como respaldo
+      if (navigator.vibrate) {
+        switch(type) {
+          case 'drop':
+            navigator.vibrate(50);
+            break;
+          case 'merge':
+            navigator.vibrate([100, 50, 100]);
+            break;
+          case 'bounce':
+            navigator.vibrate(30);
+            break;
+          case 'gameover':
+            navigator.vibrate([200, 100, 200, 100, 200]);
+            break;
+        }
+      }
+      
+      // Sonidos con Web Audio API
+      switch(type) {
+        case 'drop':
+          createTone(200 + level * 50, 0.1, 'sine', 0.15);
+          break;
+        case 'merge':
+          const mergeFreqs = [300 + level * 100, 400 + level * 100, 500 + level * 100];
+          createComplexSound(mergeFreqs, 0.3, 'triangle', 0.2);
+          break;
+        case 'bounce':
+          createTone(150 + Math.random() * 100, 0.05, 'square', 0.1);
+          break;
+        case 'gameover':
+          createComplexSound([400, 350, 300, 250, 200], 1.0, 'sawtooth', 0.3);
+          break;
+        case 'success':
+          createComplexSound([523, 659, 784, 1047], 0.5, 'sine', 0.25);
+          break;
+      }
+    }
+
+    function actualizarPuntaje(valor) {
+      score += valor;
+      document.getElementById("score").textContent = `Puntaje: ${score}`;
+      
+      // Efecto visual de puntuación
+      const scoreContainer = document.getElementById("score-container");
+      scoreContainer.classList.remove("score-popup");
+      void scoreContainer.offsetWidth; // Trigger reflow
+      scoreContainer.classList.add("score-popup");
+      
+      setTimeout(() => {
+        scoreContainer.classList.remove("score-popup");
+      }, 500);
+    }
+
+    function generarProximoNivel() {
+      const probabilidades = [40, 30, 20, 8, 2];
+      const random = Math.random() * 100;
+      
+      let acumulado = 0;
+      for (let i = 0; i < probabilidades.length; i++) {
+        acumulado += probabilidades[i];
+        if (random <= acumulado) {
+          return i + 1;
+        }
+      }
+      return 1;
+    }
+
+    function getEventPosition(evento) {
+      if (!canvasRect) canvasRect = canvas.getBoundingClientRect();
+      
+      const clientX = evento.touches ? evento.touches[0].clientX : evento.clientX;
+      return (clientX - canvasRect.left) * (canvas.width / window.devicePixelRatio) / canvasRect.width;
+    }
+
+    function actualizarPreview(evento) {
+      if (gameOver || dropCooldown > 0) return;
+      
+      evento.preventDefault();
+      const eventX = getEventPosition(evento);
+      const canvasWidth = canvas.width / window.devicePixelRatio;
+      
+      previewX = eventX;
+      const radius = levelRadii[nextLevel];
+      previewX = Math.max(radius, Math.min(canvasWidth - radius, previewX));
+    }
+
+    function soltarRM(evento) {
+      if (gameOver || dropCooldown > 0) return;
+      
+      evento.preventDefault();
+      
+      const radius = levelRadii[nextLevel];
+      const canvasWidth = canvas.width / window.devicePixelRatio;
+      const canvasHeight = canvas.height / window.devicePixelRatio;
+      
+      const randomOffset = (Math.random() - 0.5) * 10;
+
+      rms.push({
+        x: previewX + randomOffset,
+        y: 80 + radius,
+        vx: 0,
+        vy: 0,
+        level: nextLevel,
+        isSettled: false,
+        settleTimer: 0,
+        mergeTimer: 0,
+        scale: 0.8, // Para efecto de entrada
+        targetScale: 1,
+        rotation: 0,
+        angularVelocity: (Math.random() - 0.5) * 0.3
+      });
+      
+      playSound('drop', nextLevel);
+      createParticleExplosion(previewX, 80 + radius, levelColors[nextLevel - 1], 8);
+      
+      dropCooldown = 60;
+      nextLevel = generarProximoNivel();
+    }
+
+    // Event listeners optimizados para móvil
+    canvas.addEventListener("mousemove", actualizarPreview, { passive: false });
+    canvas.addEventListener("touchmove", actualizarPreview, { passive: false });
+    canvas.addEventListener("click", soltarRM, { passive: false });
+    canvas.addEventListener("touchstart", soltarRM, { passive: false });
+
+    function detectarColision(a, b) {
+      const dx = a.x - b.x;
+      const dy = a.y - b.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const radiusA = levelRadii[a.level] * a.scale;
+      const radiusB = levelRadii[b.level] * b.scale;
+      return distance < (radiusA + radiusB - 2);
+    }
+
+    function resolverColision(a, b) {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  let distance = Math.sqrt(dx * dx + dy * dy);
+  
+  // Manejar caso de distancia cero (superposición perfecta)
+  if (distance === 0) {
+    distance = 0.001; // Valor mínimo para evitar división por cero
+    // Añadir pequeña separación aleatoria
+    a.x += (Math.random() - 0.5) * 2;
+    a.y += (Math.random() - 0.5) * 2;
+    b.x += (Math.random() - 0.5) * 2;
+    b.y += (Math.random() - 0.5) * 2;
+    return;
+  }
+  
+  const radiusA = levelRadii[a.level] * a.scale;
+  const radiusB = levelRadii[b.level] * b.scale;
+  const overlap = (radiusA + radiusB) - distance;
+  
+  if (overlap <= 0) return;
+  
+  const nx = dx / distance;
+  const ny = dy / distance;
+  
+  const separacion = overlap * 0.5;
+  a.x += nx * separacion;
+  a.y += ny * separacion;
+  b.x -= nx * separacion;
+  b.y -= ny * separacion;
+  
+  const relativeVx = a.vx - b.vx;
+  const relativeVy = a.vy - b.vy;
+  const speed = relativeVx * nx + relativeVy * ny;
+  
+  if (speed > 0) return;
+  
+  const impulse = 2 * speed / 2;
+  const impulseX = impulse * nx * bounceDamping;
+  const impulseY = impulse * ny * bounceDamping;
+  
+  a.vx -= impulseX;
+  a.vy -= impulseY;
+  b.vx += impulseX;
+  b.vy += impulseY;
+  
+  if (Math.abs(speed) > 3) {
+    playSound('bounce');
+    addScreenShake(2, 10);
+  }
+}
+
+    function puedenFusionar(a, b) {
+      return a.level === b.level && 
+             a.level < maxLevel && 
+             a.mergeTimer > 10 && 
+             b.mergeTimer > 10 &&
+             Math.abs(a.vx) < 2 && 
+             Math.abs(a.vy) < 2 &&
+             Math.abs(b.vx) < 2 && 
+             Math.abs(b.vy) < 2;
+    }
+
+    function dibujarPreview() {
+      if (gameOver || dropCooldown > 0) return;
+      
+      const canvasWidth = canvas.width / window.devicePixelRatio;
+      const canvasHeight = canvas.height / window.devicePixelRatio;
+      const radius = levelRadii[nextLevel];
+      
+      // Línea de drop con efecto pulsante
+      const pulseIntensity = 0.5 + 0.5 * Math.sin(Date.now() * 0.005);
+      ctx.strokeStyle = `rgba(120, 84, 60, ${0.6 * pulseIntensity})`;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(previewX, 80);
+      ctx.lineTo(previewX, canvasHeight);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      
+      // Preview de la bola con efecto de respiración
+      const breathScale = 1 + 0.1 * Math.sin(Date.now() * 0.008);
+      const previewRadius = radius * breathScale;
+      
+      const img = images[nextLevel];
+      if (img && img.complete && img.naturalWidth > 0) {
+        ctx.save();
+        ctx.globalAlpha = 0.7;
+        ctx.beginPath();
+        ctx.arc(previewX, 80, previewRadius, 0, Math.PI * 2);
+        ctx.clip();
+        const size = previewRadius * 2;
+        ctx.drawImage(img, previewX - previewRadius, 80 - previewRadius, size, size);
+        ctx.restore();
+      } else {
+        ctx.fillStyle = levelColors[nextLevel - 1] + "80";
+        ctx.beginPath();
+        ctx.arc(previewX, 80, previewRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
+      // Borde del preview con glow
+      const glowIntensity = 0.3 + 0.7 * Math.sin(Date.now() * 0.006);
+      ctx.shadowColor = levelColors[nextLevel - 1];
+      ctx.shadowBlur = 10 * glowIntensity;
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(previewX, 80, previewRadius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+
+    function updateParticles() {
+      particles = particles.filter(particle => {
+        particle.update();
+        return !particle.isDead();
+      });
+    }
+
+    function drawParticles() {
+      particles.forEach(particle => {
+        particle.draw(ctx);
+      });
+    }
+
+    function loop() {
+      const canvasWidth = canvas.width / window.devicePixelRatio;
+      const canvasHeight = canvas.height / window.devicePixelRatio;
+      
+      // Screen shake
+      ctx.save();
+      if (screenShakeTimer > 0) {
+        const shakeX = (Math.random() - 0.5) * screenShakeIntensity;
+        const shakeY = (Math.random() - 0.5) * screenShakeIntensity;
+        ctx.translate(shakeX, shakeY);
+        screenShakeTimer--;
+        if (screenShakeTimer <= 0) {
+          screenShakeIntensity = 0;
+        }
+      }
+      
+      ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+      
+      if (dropCooldown > 0) dropCooldown--;
+      
+      // Dibujar zona de drop con gradiente animado
+      const gradient = ctx.createLinearGradient(0, 0, 0, 80);
+      const time = Date.now() * 0.002;
+      gradient.addColorStop(0, `rgba(255, 255, 255, ${0.1 + 0.1 * Math.sin(time)})`);
+      gradient.addColorStop(1, `rgba(255, 255, 255, ${0.2 + 0.1 * Math.sin(time + 1)})`);
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvasWidth, 80);
+      
+      // Línea de game over con efecto pulsante
+      const pulseLine = 3 + Math.sin(Date.now() * 0.01) * 1;
+      ctx.strokeStyle = "#996d4f";
+      ctx.lineWidth = pulseLine;
+      ctx.beginPath();
+      ctx.moveTo(0, 80);
+      ctx.lineTo(canvasWidth, 80);
+      ctx.stroke();
+
+      if (gameOver) {
+        ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+        
+        // Efecto de texto parpadeante
+        const textAlpha = 0.5 + 0.5 * Math.sin(Date.now() * 0.005);
+        ctx.fillStyle = `rgba(255, 255, 255, ${textAlpha})`;
+        ctx.font = "32px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("Perdiste amor :c", canvasWidth / 2, canvasHeight / 2);
+        ctx.font = "18px sans-serif";
+        ctx.fillText("Toca para reiniciar", canvasWidth / 2, canvasHeight / 2 + 50);
+        ctx.restore();
+        return;
+      }
+
+      // Detectar fusiones
+      const indicesAEliminar = new Set();
+      const nuevosRMs = [];
+
+      for (let i = 0; i < rms.length; i++) {
+        for (let j = i + 1; j < rms.length; j++) {
+          if (indicesAEliminar.has(i) || indicesAEliminar.has(j)) continue;
+
+          const a = rms[i];
+          const b = rms[j];
+
+          if (detectarColision(a, b)) {
+            if (puedenFusionar(a, b)) {
+              indicesAEliminar.add(i);
+              indicesAEliminar.add(j);
+
+              const newLevel = a.level + 1;
+              const mergeX = (a.x + b.x) / 2;
+              const mergeY = Math.min(a.y, b.y);
+              
+              nuevosRMs.push({
+                x: mergeX,
+                y: mergeY,
+                vx: 0,
+                vy: -2,
+                level: newLevel,
+                isSettled: false,
+                settleTimer: 0,
+                mergeTimer: 0,
+                scale: 1.3, // Empieza más grande
+                targetScale: 1,
+                rotation: 0,
+                angularVelocity: (Math.random() - 0.5) * 0.2
+              });
+
+              // Efectos de fusión
+              playSound('merge');
+              addScreenShake(5, 15);
+              createParticleExplosion(mergeX, mergeY, levelColors[newLevel - 1], 20);
+              
+              // Partículas de los RMs que se fusionan
+              createParticleExplosion(a.x, a.y, levelColors[a.level - 1], 6);
+              createParticleExplosion(b.x, b.y, levelColors[b.level - 1], 6);
+
+              actualizarPuntaje(a.level * 20);
+            } else {
+              resolverColision(a, b);
+            }
+          }
+        }
+      }
+
+      Array.from(indicesAEliminar)
+        .sort((a, b) => b - a)
+        .forEach(index => rms.splice(index, 1));
+
+      rms.push(...nuevosRMs);
+
+      // Actualizar física
+      for (const rm of rms) {
+        const radius = levelRadii[rm.level] * rm.scale;
+        
+        rm.mergeTimer++;
+        rm.vy += gravity;
+        rm.x += rm.vx;
+        rm.y += rm.vy;
+        rm.vx *= friction;
+        
+        // Animación de escala
+        if (rm.scale !== rm.targetScale) {
+          rm.scale += (rm.targetScale - rm.scale) * 0.1;
+          if (Math.abs(rm.scale - rm.targetScale) < 0.01) {
+            rm.scale = rm.targetScale;
+          }
+        }
+
+        
+        // Colisión con paredes laterales
+        if (rm.x - radius <= 0) {
+          rm.x = radius;
+          rm.vx *= -bounceDamping;
+          rm.angularVelocity += Math.random() * 0.2 - 0.1;
+          createImpactParticles(rm.x, rm.y, levelColors[rm.level - 1], 0.5);
+        } else if (rm.x + radius >= canvasWidth) {
+          rm.x = canvasWidth - radius;
+          rm.vx *= -bounceDamping;
+          rm.angularVelocity += Math.random() * 0.2 - 0.1;
+          createImpactParticles(rm.x, rm.y, levelColors[rm.level - 1], 0.5);
+        }
+        
+        // Colisión con el suelo
+        if (rm.y + radius >= canvasHeight) {
+          rm.y = canvasHeight - radius;
+          rm.vy *= -bounceDamping;
+          rm.vx *= 0.9;
+          rm.angularVelocity += (Math.random() - 0.5) * 0.3;
+          
+          if (Math.abs(rm.vy) > 2) {
+            createImpactParticles(rm.x, rm.y + radius, levelColors[rm.level - 1], 5);
+            addScreenShake(1, 5);
+          }
+          
+          if (Math.abs(rm.vy) < 0.5) {
+            rm.vy = 0;
+          }
+        }
+        
+        // Determinar si está estable
+        if (Math.abs(rm.vx) < 0.5 && Math.abs(rm.vy) < 0.5) {
+          rm.settleTimer++;
+          if (rm.settleTimer > 60) {
+            rm.isSettled = true;
+          }
+        } else {
+          rm.settleTimer = 0;
+          rm.isSettled = false;
+        }
+        
+        // Game over
+        if (rm.y - radius <= 80 && rm.isSettled && rm.mergeTimer > 120) {
+          gameOver = true;
+          playSound('gameover');
+          addScreenShake(10, 30);
+          
+          // Efecto visual de game over
+          const gameContainer = document.getElementById("game-container");
+          gameContainer.classList.add("shake");
+          setTimeout(() => {
+            gameContainer.classList.remove("shake");
+          }, 300);
+        }
+        
+        // Dibujar RM con efectos mejorados
+        ctx.save();
+        ctx.translate(rm.x, rm.y);
+        ctx.rotate(rm.rotation);
+        ctx.scale(rm.scale, rm.scale);
+        
+        const img = images[rm.level];
+        if (img && img.complete && img.naturalWidth > 0) {
+          // Sombra
+          ctx.shadowColor = "rgba(0, 0, 0, 0.3)";
+          ctx.shadowBlur = 5;
+          ctx.shadowOffsetY = 3;
+          
+          ctx.beginPath();
+          ctx.arc(0, 0, radius / rm.scale, 0, Math.PI * 2);
+          ctx.clip();
+          const size = (radius / rm.scale) * 2;
+          ctx.drawImage(img, -radius / rm.scale, -radius / rm.scale, size, size);
+          ctx.restore();
+          
+          // Borde brillante
+          ctx.save();
+          ctx.translate(rm.x, rm.y);
+          ctx.scale(rm.scale, rm.scale);
+          if (!rm.isSettled) {
+            ctx.shadowColor = levelColors[rm.level - 1];
+            ctx.shadowBlur = 8;
+          }
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+          ctx.lineWidth = 1.5 / rm.scale;
+          ctx.beginPath();
+          ctx.arc(0, 0, radius / rm.scale, 0, Math.PI * 2);
+          ctx.stroke();
+        } else {
+          // Sombra para colores fallback
+          ctx.shadowColor = "rgba(0, 0, 0, 0.3)";
+          ctx.shadowBlur = 5;
+          ctx.shadowOffsetY = 3;
+          
+          ctx.fillStyle = levelColors[rm.level - 1] || "#a78bfa";
+          ctx.beginPath();
+          ctx.arc(0, 0, radius / rm.scale, 0, Math.PI * 2);
+          ctx.fill();
+          
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = "white";
+          ctx.lineWidth = 2 / rm.scale;
+          ctx.beginPath();
+          ctx.arc(0, 0, radius / rm.scale, 0, Math.PI * 2);
+          ctx.stroke();
+          
+          ctx.fillStyle = "white";
+          ctx.font = `${Math.max(10, radius/3) / rm.scale}px sans-serif`;
+          ctx.textAlign = "center";
+          ctx.fillText(rm.level.toString(), 0, 4 / rm.scale);
+        }
+        ctx.restore();
+      }
+      
+      // Actualizar y dibujar partículas
+      updateParticles();
+      drawParticles();
+      
+      dibujarPreview();
+      
+      // Indicador de estado con efectos
+      ctx.fillStyle = "rgba(64, 45, 32, 0.9)";
+      ctx.font = "16px sans-serif";
+      ctx.textAlign = "center";
+      
+      if (dropCooldown > 0) {
+        const cooldownAlpha = 0.5 + 0.5 * Math.sin(Date.now() * 0.01);
+        ctx.fillStyle = `rgba(64, 45, 32, ${cooldownAlpha})`;
+        ctx.fillText("Esperando...", canvasWidth / 2, 30);
+      } else {
+        const readyGlow = 0.7 + 0.3 * Math.sin(Date.now() * 0.008);
+        ctx.fillStyle = `rgba(64, 45, 32, ${readyGlow})`;
+        ctx.fillText("Toca para soltar", canvasWidth / 2, 30);
+      }
+
+      ctx.restore();
+      requestAnimationFrame(loop);
+    }
+
+    canvas.addEventListener("click", function(e) {
+      if (gameOver) {
+        reiniciar();
+      }
+    });
+
+    canvas.addEventListener("touchstart", function(e) {
+      if (gameOver) {
+        reiniciar();
+        e.preventDefault();
+      }
+    });
+
+    document.getElementById("restart-btn").addEventListener("click", reiniciar);
+
+    function reiniciar() {
+      rms.length = 0;
+      particles.length = 0;
+      score = 0;
+      gameOver = false;
+      dropCooldown = 0;
+      screenShakeTimer = 0;
+      screenShakeIntensity = 0;
+      nextLevel = generarProximoNivel();
+      const canvasWidth = canvas.width / window.devicePixelRatio;
+      previewX = canvasWidth / 2;
+      document.getElementById("score").textContent = "Puntaje: 0";
+      
+      // Efecto de reinicio
+      createParticleExplosion(canvasWidth / 2, canvas.height / window.devicePixelRatio / 2, "#ffffff", 25);
+      
+      // Remover clases de animación
+      const gameContainer = document.getElementById("game-container");
+      const scoreContainer = document.getElementById("score-container");
+      gameContainer.classList.remove("shake");
+      scoreContainer.classList.remove("score-popup");
+    }
+
+    // Configuración inicial y manejo de resize
+    window.addEventListener('resize', () => {
+      setupCanvas();
+    });
+
+    window.addEventListener('orientationchange', () => {
+      setTimeout(setupCanvas, 100);
+    });
+
+    // Inicializar
+    setupCanvas();
+    nextLevel = generarProximoNivel();
+    loop();
+  </script>
+</body>
+</html>
