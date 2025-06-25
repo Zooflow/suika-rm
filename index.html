@@ -155,6 +155,150 @@
             border-radius: 15px;
           }
         }
+        .ticket-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    
+    .ticket-overlay.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+    
+    .ticket {
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      border-radius: 20px;
+      padding: 30px;
+      width: 85%;
+      max-width: 400px;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      transform: scale(0.8);
+      transition: transform 0.3s ease;
+      position: relative;
+      border: 3px solid #996d4f;
+    }
+    
+    .ticket-overlay.active .ticket {
+      transform: scale(1);
+    }
+    
+    .ticket h2 {
+      color: #5e412e;
+      font-size: 24px;
+      margin-bottom: 15px;
+    }
+    
+    .ticket p {
+      color: #5e412e;
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+    
+    .ticket-img {
+      width: 120px;
+      height: 120px;
+      margin: 0 auto 20px;
+      border-radius: 50%;
+      background-color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 3px solid #996d4f;
+      overflow: hidden;
+    }
+    
+    .ticket-img img {
+      max-width: 80%;
+      max-height: 80%;
+    }
+    
+    .btn-close-ticket {
+      background-image: linear-gradient(to bottom, #a98265, #976e52);
+      color: white;
+      border: none;
+      padding: 10px 25px;
+      border-radius: 50px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+    
+    .btn-close-ticket:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+    }
+    
+    .ticket-decoration {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      background-color: #996d4f;
+      border-radius: 50%;
+    }
+    
+    .ticket-decoration.top-left {
+      top: -20px;
+      left: -20px;
+    }
+    
+    .ticket-decoration.top-right {
+      top: -20px;
+      right: -20px;
+    }
+    
+    .ticket-decoration.bottom-left {
+      bottom: -20px;
+      left: -20px;
+    }
+    
+    .ticket-decoration.bottom-right {
+      bottom: -20px;
+      right: -20px;
+    }
+
+    .theme-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: center;
+        }
+        
+        .theme-btn {
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            color: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .theme-btn.active {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        #rm-theme {
+            background: linear-gradient(to right, #6f4d36, #a98265);
+        }
+        
+        #my-theme {
+            background: linear-gradient(to right, #4a6fa5, #6d8cc0);
+        }
       </style>
 </head>
 <body>
@@ -192,10 +336,35 @@
       <div id="game-container" class="game-container w-full max-w-xs aspect-[3/5] relative">
         <canvas id="game-canvas" class="w-full h-full block"></canvas>
       </div>
+
+      <!-- Botones de tema -->
+      <div class="theme-buttons">
+        <button id="rm-theme" class="theme-btn active">RM Theme</button>
+        <button id="my-theme" class="theme-btn">Marcos Theme</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <!-- Cupón -->
+  <div id="ticket-overlay" class="ticket-overlay">
+    <div class="ticket">
+      <div class="ticket-decoration top-left"></div>
+      <div class="ticket-decoration top-right"></div>
+      <div class="ticket-decoration bottom-left"></div>
+      <div class="ticket-decoration bottom-right"></div>
+      
+      <div class="ticket-img">
+        <img id="ticket-image" src="" alt="Recompensa">
+      </div>
+      <h2 id="ticket-title">¡Felicidades!</h2>
+      <p id="ticket-message">Has ganado una recompensa especial</p>
+      <button id="btn-close-ticket" class="btn-close-ticket">Cerrar</button>
     </div>
   </div>
 
   <script>
+    // Variables del juego
     let score = 0;
     let gameOver = false;
     let nextLevel = 1;
@@ -206,746 +375,823 @@
     let screenShakeIntensity = 0;
     let soundEnabled = true;
     let audioContext = null;
-
-    const images = {};
     const maxLevel = 7;
+    let showRewardAtScores = [500, 1000, 3000, 6000, 9500, 12000, 16500, 19000, 21500, 23500]; // Puntajes para mostrar recompensas
+    let rewardsShown = []; // Para llevar registro de qué recompensas ya se mostraron
 
-    // Cargar imágenes con fallback
-    for (let i = 1; i <= maxLevel; i++) {
-      const img = new Image();
-      img.src = `assets/rm/rm${i}.jpg`;
-      img.onerror = () => {
-        console.log(`Imagen rm${i}.jpg no encontrada, usando fallback`);
-      };
-      images[i] = img;
+    // Sistema de temas
+    const themes = {
+        rm: {},
+        my: {}
+    };
+
+    const currentTheme = {
+        value: 'rm',
+        get images() {
+            return themes[this.value];
+        }
+    };
+
+    // Manejar cambio de tema
+document.getElementById('rm-theme').addEventListener('click', () => {
+    currentTheme.value = 'rm';
+    document.getElementById('rm-theme').classList.add('active');
+    document.getElementById('my-theme').classList.remove('active');
+});
+
+document.getElementById('my-theme').addEventListener('click', () => {
+    currentTheme.value = 'my';
+    document.getElementById('my-theme').classList.add('active');
+    document.getElementById('rm-theme').classList.remove('active');
+});
+
+    // Cargar imágenes para ambos temas
+    function loadImages() {
+        for (let i = 1; i <= maxLevel; i++) {
+            // Cargar imágenes de RM
+            const imgRM = new Image();
+            imgRM.src = `assets/rm/rm${i}.jpg`;
+            imgRM.onerror = () => console.log(`Imagen rm${i}.jpg no encontrada`);
+            themes.rm[i] = imgRM;
+            
+            // Cargar imágenes personalizadas
+            const imgMy = new Image();
+            imgMy.src = `assets/my/my${i}.jpg`;
+            imgMy.onerror = () => {
+                console.log(`Imagen my${i}.jpg no encontrada, usando fallback`);
+                themes.my[i] = imgRM; // Usar imagen de RM como fallback
+            };
+            themes.my[i] = imgMy;
+        }
     }
 
+    loadImages();
+
+    // Configuración del canvas
     const canvas = document.getElementById("game-canvas");
     const ctx = canvas.getContext("2d");
 
-    // Sistema de audio Web Audio API
-    function initAudio() {
-      if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      }
-    }
-
-    function createTone(frequency, duration, type = 'sine', volume = 0.1) {
-      if (!soundEnabled || !audioContext) return;
-      
-      try {
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
-        oscillator.type = type;
-        
-        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-        gainNode.gain.linearRampToValueAtTime(volume, audioContext.currentTime + 0.01);
-        gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
-        
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + duration);
-      } catch (e) {
-        console.log('Error creating audio:', e);
-      }
-    }
-
-    // Crear sonidos más complejos
-    function createComplexSound(frequencies, duration, type = 'sine', volume = 0.1) {
-      if (!soundEnabled || !audioContext) return;
-      
-      frequencies.forEach((freq, index) => {
-        setTimeout(() => {
-          createTone(freq, duration / frequencies.length, type, volume);
-        }, index * (duration * 1000) / frequencies.length / 2);
-      });
-    }
-
-    // Configuración responsive del canvas
-    function setupCanvas() {
-      const container = canvas.parentElement;
-      const containerRect = container.getBoundingClientRect();
-      
-      canvas.width = Math.floor(containerRect.width * window.devicePixelRatio);
-      canvas.height = Math.floor(containerRect.height * window.devicePixelRatio);
-      
-      canvas.style.width = containerRect.width + 'px';
-      canvas.style.height = containerRect.height + 'px';
-      
-      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-      
-      canvasRect = canvas.getBoundingClientRect();
-      previewX = containerRect.width / 2;
-    }
-
+    // Física del juego
     const gravity = 0.4;
     const friction = 0.98;
     const bounceDamping = 0.3;
 
     const levelRadii = {
-      1: 16, 2: 22, 3: 28, 4: 35, 5: 42, 6: 50, 7: 58
+        1: 16, 2: 22, 3: 28, 4: 35, 5: 42, 6: 50, 7: 58
     };
 
     const levelColors = [
-      "#ff9999", "#ffcc99", "#ffff99", "#ccff99", 
-      "#99ffcc", "#99ccff", "#cc99ff"
+        "#ff9999", "#ffcc99", "#ffff99", "#ccff99", 
+        "#99ffcc", "#99ccff", "#cc99ff"
     ];
 
     const rms = [];
     let dropCooldown = 0;
 
-    // Sistema de partículas
+    // Sistema de partículas (tu código existente)
     class Particle {
-      constructor(x, y, color, size = 3) {
-        this.x = x;
-        this.y = y;
-        this.vx = (Math.random() - 0.5) * 8;
-        this.vy = (Math.random() - 0.5) * 8 - 2;
-        this.color = color;
-        this.size = size;
-        this.life = 1.0;
-        this.decay = 0.02 + Math.random() * 0.02;
-        this.gravity = 0.1;
-      }
-
-      update() {
-        this.x += this.vx;
-        this.y += this.vy;
-        this.vy += this.gravity;
-        this.vx *= 0.99;
-        this.life -= this.decay;
-        this.size *= 0.98;
-      }
-
-      draw(ctx) {
-        ctx.globalAlpha = this.life;
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-      }
-
-      isDead() {
-        return this.life <= 0 || this.size <= 0.5;
-      }
-    }
-
-    // Crear explosión de partículas
-    function createParticleExplosion(x, y, color, count = 8) {
-      for (let i = 0; i < count; i++) {
-        particles.push(new Particle(x, y, color, 2 + Math.random() * 4));
-      }
-    }
-
-    // Crear partículas de impacto
-    function createImpactParticles(x, y, color, count = 1) {
-      for (let i = 0; i < count; i++) {
-        particles.push(new Particle(x, y, color, 1 + Math.random() * 2));
-      }
-    }
-
-    // Screen shake
-    function addScreenShake(intensity = 5, duration = 20) {
-      screenShakeTimer = Math.max(screenShakeTimer, duration);
-      screenShakeIntensity = Math.max(screenShakeIntensity, intensity);
-    }
-
-    // Efectos de sonido mejorados
-    function playSound(type, level = 1) {
-      if (!soundEnabled) return;
-      
-      // Inicializar audio context en primera interacción
-      if (!audioContext) {
-        initAudio();
-      }
-      
-      // Vibración como respaldo
-      if (navigator.vibrate) {
-        switch(type) {
-          case 'drop':
-            navigator.vibrate(50);
-            break;
-          case 'merge':
-            navigator.vibrate([100, 50, 100]);
-            break;
-          case 'bounce':
-            navigator.vibrate(30);
-            break;
-          case 'gameover':
-            navigator.vibrate([200, 100, 200, 100, 200]);
-            break;
+        constructor(x, y, color, size = 3) {
+            this.x = x;
+            this.y = y;
+            this.vx = (Math.random() - 0.5) * 8;
+            this.vy = (Math.random() - 0.5) * 8 - 2;
+            this.color = color;
+            this.size = size;
+            this.life = 1.0;
+            this.decay = 0.02 + Math.random() * 0.02;
+            this.gravity = 0.1;
         }
-      }
-      
-      // Sonidos con Web Audio API
-      switch(type) {
-        case 'drop':
-          createTone(200 + level * 50, 0.1, 'sine', 0.15);
-          break;
-        case 'merge':
-          const mergeFreqs = [300 + level * 100, 400 + level * 100, 500 + level * 100];
-          createComplexSound(mergeFreqs, 0.3, 'triangle', 0.2);
-          break;
-        case 'bounce':
-          createTone(150 + Math.random() * 100, 0.05, 'square', 0.1);
-          break;
-        case 'gameover':
-          createComplexSound([400, 350, 300, 250, 200], 1.0, 'sawtooth', 0.3);
-          break;
-        case 'success':
-          createComplexSound([523, 659, 784, 1047], 0.5, 'sine', 0.25);
-          break;
-      }
+
+        update() {
+            this.x += this.vx;
+            this.y += this.vy;
+            this.vy += this.gravity;
+            this.vx *= 0.99;
+            this.life -= this.decay;
+            this.size *= 0.98;
+        }
+
+        draw(ctx) {
+            ctx.globalAlpha = this.life;
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+        }
+
+        isDead() {
+            return this.life <= 0 || this.size <= 0.5;
+        }
+    }
+
+    // Funciones del juego (actualizadas para usar currentTheme.images)
+    function createParticleExplosion(x, y, color, count = 8) {
+        for (let i = 0; i < count; i++) {
+            particles.push(new Particle(x, y, color, 2 + Math.random() * 4));
+        }
+    }
+
+    function createImpactParticles(x, y, color, count = 1) {
+        for (let i = 0; i < count; i++) {
+            particles.push(new Particle(x, y, color, 1 + Math.random() * 2));
+        }
+    }
+
+    function addScreenShake(intensity = 5, duration = 20) {
+        screenShakeTimer = Math.max(screenShakeTimer, duration);
+        screenShakeIntensity = Math.max(screenShakeIntensity, intensity);
+    }
+
+    // Audio (tu código existente)
+    function initAudio() {
+        if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+    }
+
+
+    function checkForRewards() {
+    showRewardAtScores.forEach((targetScore, index) => {
+        if (score >= targetScore && !rewardsShown.includes(targetScore)) {
+            showReward(index + 1);
+            rewardsShown.push(targetScore);
+        }
+    });
+}
+
+function showReward(rewardLevel) {
+    const overlay = document.getElementById('ticket-overlay');
+    const ticketImg = document.getElementById('ticket-image');
+    const ticketTitle = document.getElementById('ticket-title');
+    const ticketMsg = document.getElementById('ticket-message');
+    
+    // Configura la recompensa según el nivel
+    switch(rewardLevel) {
+        case 1:
+            ticketImg.src = 'assets/rewards/reward1.jpg';
+            ticketTitle.textContent = 'Ganaste una carioca!';
+            ticketMsg.textContent = 'Sigue jugando para ganar más premios, recuerda sacarle screenshot - 1';
+            break;
+        case 2:
+            ticketImg.src = 'assets/rewards/reward2.jpg';
+            ticketTitle.textContent = 'Ganaste otra carioca!';
+            ticketMsg.textContent = 'Sigue asi amorcito, recuerda sacarle screenshot - 2';
+            break;
+        case 3:
+            ticketImg.src = 'assets/rewards/reward3.jpg';
+            ticketTitle.textContent = 'Ganaste un chocolate de menta!';
+            ticketMsg.textContent = 'Tu puedes amor :3, recuerda sacarle screenshot - 3';
+            break;
+        case 4:
+            ticketImg.src = 'assets/rewards/reward4.jpg';
+            ticketTitle.textContent = 'Ganaste otro chocolate de menta!';
+            ticketMsg.textContent = 'El premio 10 te gusta mucho, recuerda sacarle screenshot - 4';
+            break;
+        case 5:
+            ticketImg.src = 'assets/rewards/reward5.jpg';
+            ticketTitle.textContent = 'Ganaste una caja de bon o bon blanco!';
+            ticketMsg.textContent = 'De tu color amor :3, recuerda sacarle screenshot - 5';
+            break;
+        case 6:
+            ticketImg.src = 'assets/rewards/reward6.jpg';
+            ticketTitle.textContent = 'Ganaste una galleta Oreo!';
+            ticketMsg.textContent = 'Espero que me compartas :u, recuerda sacarle screenshot - 6';
+            break;
+        case 7:
+            ticketImg.src = 'assets/rewards/reward7.jpg';
+            ticketTitle.textContent = 'Ganaste otra galleta Oreo!';
+            ticketMsg.textContent = 'Si me vas a compartir?, recuerda sacarle screenshot - 7';
+            break;
+        case 8:
+            ticketImg.src = 'assets/rewards/reward8.jpg';
+            ticketTitle.textContent = 'Ganaste unos Doritos!';
+            ticketMsg.textContent = 'Para salir de lo dulce un poco, recuerda sacarle screenshot - 8';
+            break;
+        case 9:
+            ticketImg.src = 'assets/rewards/reward9.jpg';
+            ticketTitle.textContent = 'Ganaste unas ramitas de queso!';
+            ticketMsg.textContent = 'Un poco mas de salado no hace mal :3, recuerda sacarle screenshot - 9';
+            break;
+        case 10:
+            ticketImg.src = 'assets/rewards/reward10.jpg';
+            ticketTitle.textContent = 'Ganaste poyo fritooo!';
+            ticketMsg.textContent = 'Felicidades amor, llegaste al premio final :3, recuerda sacarle screenshot - 10';
+            break;
+    }
+    
+    overlay.classList.add('active');
+}
+
+function setupRewardListeners() {
+    document.getElementById('btn-close-ticket').addEventListener('click', () => {
+        document.getElementById('ticket-overlay').classList.remove('active');
+    });
+}
+
+    function createTone(frequency, duration, type = 'sine', volume = 0.1) {
+        if (!soundEnabled || !audioContext) return;
+        
+        try {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            oscillator.type = type;
+            
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(volume, audioContext.currentTime + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+        } catch (e) {
+            console.log('Error creating audio:', e);
+        }
+    }
+
+    function createComplexSound(frequencies, duration, type = 'sine', volume = 0.1) {
+    if (!soundEnabled || !audioContext) return;
+    
+    try {
+        const gainNode = audioContext.createGain();
+        gainNode.connect(audioContext.destination);
+        
+        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(volume, audioContext.currentTime + 0.01);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+        
+        frequencies.forEach((freq, i) => {
+            const oscillator = audioContext.createOscillator();
+            oscillator.connect(gainNode);
+            oscillator.frequency.setValueAtTime(freq, audioContext.currentTime);
+            oscillator.type = type;
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+        });
+    } catch (e) {
+        console.log('Error creating complex sound:', e);
+    }
+}
+
+    function playSound(type, level = 1) {
+        if (!soundEnabled) return;
+        
+        if (!audioContext) {
+            initAudio();
+        }
+        
+        if (navigator.vibrate) {
+            switch(type) {
+                case 'drop': navigator.vibrate(50); break;
+                case 'merge': navigator.vibrate([100, 50, 100]); break;
+                case 'bounce': navigator.vibrate(30); break;
+                case 'gameover': navigator.vibrate([200, 100, 200, 100, 200]); break;
+            }
+        }
+        
+        switch(type) {
+            case 'drop': createTone(200 + level * 50, 0.1, 'sine', 0.15); break;
+            case 'merge':
+                const mergeFreqs = [300 + level * 100, 400 + level * 100, 500 + level * 100];
+                createComplexSound(mergeFreqs, 0.3, 'triangle', 0.2);
+                break;
+            case 'bounce': createTone(150 + Math.random() * 100, 0.05, 'square', 0.1); break;
+            case 'gameover': createComplexSound([400, 350, 300, 250, 200], 1.0, 'sawtooth', 0.3); break;
+            case 'success': createComplexSound([523, 659, 784, 1047], 0.5, 'sine', 0.25); break;
+        }
     }
 
     function actualizarPuntaje(valor) {
-      score += valor;
-      document.getElementById("score").textContent = `Puntaje: ${score}`;
-      
-      // Efecto visual de puntuación
-      const scoreContainer = document.getElementById("score-container");
-      scoreContainer.classList.remove("score-popup");
-      void scoreContainer.offsetWidth; // Trigger reflow
-      scoreContainer.classList.add("score-popup");
-      
-      setTimeout(() => {
+    score += valor;
+    document.getElementById("score").textContent = `Puntaje: ${score}`;
+    
+    checkForRewards(); // <-- Añade esta línea
+    
+    const scoreContainer = document.getElementById("score-container");
+    scoreContainer.classList.remove("score-popup");
+    void scoreContainer.offsetWidth;
+    scoreContainer.classList.add("score-popup");
+    
+    setTimeout(() => {
         scoreContainer.classList.remove("score-popup");
-      }, 500);
-    }
+    }, 500);
+}
 
     function generarProximoNivel() {
-      const probabilidades = [40, 30, 20, 8, 2];
-      const random = Math.random() * 100;
-      
-      let acumulado = 0;
-      for (let i = 0; i < probabilidades.length; i++) {
-        acumulado += probabilidades[i];
-        if (random <= acumulado) {
-          return i + 1;
+        const probabilidades = [40, 30, 20, 8, 2];
+        const random = Math.random() * 100;
+        
+        let acumulado = 0;
+        for (let i = 0; i < probabilidades.length; i++) {
+            acumulado += probabilidades[i];
+            if (random <= acumulado) {
+                return i + 1;
+            }
         }
-      }
-      return 1;
+        return 1;
     }
 
     function getEventPosition(evento) {
-      if (!canvasRect) canvasRect = canvas.getBoundingClientRect();
-      
-      const clientX = evento.touches ? evento.touches[0].clientX : evento.clientX;
-      return (clientX - canvasRect.left) * (canvas.width / window.devicePixelRatio) / canvasRect.width;
+        if (!canvasRect) canvasRect = canvas.getBoundingClientRect();
+        
+        const clientX = evento.touches ? evento.touches[0].clientX : evento.clientX;
+        return (clientX - canvasRect.left) * (canvas.width / window.devicePixelRatio) / canvasRect.width;
     }
 
     function actualizarPreview(evento) {
-      if (gameOver || dropCooldown > 0) return;
-      
-      evento.preventDefault();
-      const eventX = getEventPosition(evento);
-      const canvasWidth = canvas.width / window.devicePixelRatio;
-      
-      previewX = eventX;
-      const radius = levelRadii[nextLevel];
-      previewX = Math.max(radius, Math.min(canvasWidth - radius, previewX));
+        if (gameOver || dropCooldown > 0) return;
+        
+        evento.preventDefault();
+        const eventX = getEventPosition(evento);
+        const canvasWidth = canvas.width / window.devicePixelRatio;
+        
+        previewX = eventX;
+        const radius = levelRadii[nextLevel];
+        previewX = Math.max(radius, Math.min(canvasWidth - radius, previewX));
     }
 
     function soltarRM(evento) {
-      if (gameOver || dropCooldown > 0) return;
-      
-      evento.preventDefault();
-      
-      const radius = levelRadii[nextLevel];
-      const canvasWidth = canvas.width / window.devicePixelRatio;
-      const canvasHeight = canvas.height / window.devicePixelRatio;
-      
-      const randomOffset = (Math.random() - 0.5) * 10;
+        if (gameOver || dropCooldown > 0) return;
+        
+        evento.preventDefault();
+        
+        const radius = levelRadii[nextLevel];
+        const canvasWidth = canvas.width / window.devicePixelRatio;
+        const canvasHeight = canvas.height / window.devicePixelRatio;
+        
+        const randomOffset = (Math.random() - 0.5) * 10;
 
-      rms.push({
-        x: previewX + randomOffset,
-        y: 80 + radius,
-        vx: 0,
-        vy: 0,
-        level: nextLevel,
-        isSettled: false,
-        settleTimer: 0,
-        mergeTimer: 0,
-        scale: 0.8, // Para efecto de entrada
-        targetScale: 1,
-        rotation: 0,
-        angularVelocity: (Math.random() - 0.5) * 0.3
-      });
-      
-      playSound('drop', nextLevel);
-      createParticleExplosion(previewX, 80 + radius, levelColors[nextLevel - 1], 8);
-      
-      dropCooldown = 60;
-      nextLevel = generarProximoNivel();
+        rms.push({
+            x: previewX + randomOffset,
+            y: 80 + radius,
+            vx: 0,
+            vy: 0,
+            level: nextLevel,
+            isSettled: false,
+            settleTimer: 0,
+            mergeTimer: 0,
+            scale: 0.8,
+            targetScale: 1,
+            rotation: 0,
+            angularVelocity: (Math.random() - 0.5) * 0.3
+        });
+        
+        playSound('drop', nextLevel);
+        createParticleExplosion(previewX, 80 + radius, levelColors[nextLevel - 1], 8);
+        
+        dropCooldown = 60;
+        nextLevel = generarProximoNivel();
     }
 
-    // Event listeners optimizados para móvil
+    // Event listeners
     canvas.addEventListener("mousemove", actualizarPreview, { passive: false });
     canvas.addEventListener("touchmove", actualizarPreview, { passive: false });
     canvas.addEventListener("click", soltarRM, { passive: false });
     canvas.addEventListener("touchstart", soltarRM, { passive: false });
 
     function detectarColision(a, b) {
-      const dx = a.x - b.x;
-      const dy = a.y - b.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      const radiusA = levelRadii[a.level] * a.scale;
-      const radiusB = levelRadii[b.level] * b.scale;
-      return distance < (radiusA + radiusB - 2);
+        const dx = a.x - b.x;
+        const dy = a.y - b.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const radiusA = levelRadii[a.level] * a.scale;
+        const radiusB = levelRadii[b.level] * b.scale;
+        return distance < (radiusA + radiusB - 2);
     }
 
     function resolverColision(a, b) {
-  const dx = a.x - b.x;
-  const dy = a.y - b.y;
-  let distance = Math.sqrt(dx * dx + dy * dy);
-  
-  // Manejar caso de distancia cero (superposición perfecta)
-  if (distance === 0) {
-    distance = 0.001; // Valor mínimo para evitar división por cero
-    // Añadir pequeña separación aleatoria
-    a.x += (Math.random() - 0.5) * 2;
-    a.y += (Math.random() - 0.5) * 2;
-    b.x += (Math.random() - 0.5) * 2;
-    b.y += (Math.random() - 0.5) * 2;
-    return;
-  }
-  
-  const radiusA = levelRadii[a.level] * a.scale;
-  const radiusB = levelRadii[b.level] * b.scale;
-  const overlap = (radiusA + radiusB) - distance;
-  
-  if (overlap <= 0) return;
-  
-  const nx = dx / distance;
-  const ny = dy / distance;
-  
-  const separacion = overlap * 0.5;
-  a.x += nx * separacion;
-  a.y += ny * separacion;
-  b.x -= nx * separacion;
-  b.y -= ny * separacion;
-  
-  const relativeVx = a.vx - b.vx;
-  const relativeVy = a.vy - b.vy;
-  const speed = relativeVx * nx + relativeVy * ny;
-  
-  if (speed > 0) return;
-  
-  const impulse = 2 * speed / 2;
-  const impulseX = impulse * nx * bounceDamping;
-  const impulseY = impulse * ny * bounceDamping;
-  
-  a.vx -= impulseX;
-  a.vy -= impulseY;
-  b.vx += impulseX;
-  b.vy += impulseY;
-  
-  if (Math.abs(speed) > 3) {
-    playSound('bounce');
-    addScreenShake(2, 10);
-  }
-}
+        const dx = a.x - b.x;
+        const dy = a.y - b.y;
+        let distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance === 0) {
+            distance = 0.001;
+            a.x += (Math.random() - 0.5) * 2;
+            a.y += (Math.random() - 0.5) * 2;
+            b.x += (Math.random() - 0.5) * 2;
+            b.y += (Math.random() - 0.5) * 2;
+            return;
+        }
+        
+        const radiusA = levelRadii[a.level] * a.scale;
+        const radiusB = levelRadii[b.level] * b.scale;
+        const overlap = (radiusA + radiusB) - distance;
+        
+        if (overlap <= 0) return;
+        
+        const nx = dx / distance;
+        const ny = dy / distance;
+        
+        const separacion = overlap * 0.5;
+        a.x += nx * separacion;
+        a.y += ny * separacion;
+        b.x -= nx * separacion;
+        b.y -= ny * separacion;
+        
+        const relativeVx = a.vx - b.vx;
+        const relativeVy = a.vy - b.vy;
+        const speed = relativeVx * nx + relativeVy * ny;
+        
+        if (speed > 0) return;
+        
+        const impulse = 2 * speed / 2;
+        const impulseX = impulse * nx * bounceDamping;
+        const impulseY = impulse * ny * bounceDamping;
+        
+        a.vx -= impulseX;
+        a.vy -= impulseY;
+        b.vx += impulseX;
+        b.vy += impulseY;
+        
+        if (Math.abs(speed) > 3) {
+            playSound('bounce');
+            addScreenShake(2, 10);
+        }
+    }
 
     function puedenFusionar(a, b) {
-      return a.level === b.level && 
-             a.level < maxLevel && 
-             a.mergeTimer > 10 && 
-             b.mergeTimer > 10 &&
-             Math.abs(a.vx) < 2 && 
-             Math.abs(a.vy) < 2 &&
-             Math.abs(b.vx) < 2 && 
-             Math.abs(b.vy) < 2;
+        return a.level === b.level && 
+               a.level < maxLevel && 
+               a.mergeTimer > 5 && 
+               b.mergeTimer > 5 &&
+               Math.abs(a.vx) < 3 && 
+               Math.abs(a.vy) < 3 &&
+               Math.abs(b.vx) < 3 && 
+               Math.abs(b.vy) < 3;
     }
 
     function dibujarPreview() {
-      if (gameOver || dropCooldown > 0) return;
-      
-      const canvasWidth = canvas.width / window.devicePixelRatio;
-      const canvasHeight = canvas.height / window.devicePixelRatio;
-      const radius = levelRadii[nextLevel];
-      
-      // Línea de drop con efecto pulsante
-      const pulseIntensity = 0.5 + 0.5 * Math.sin(Date.now() * 0.005);
-      ctx.strokeStyle = `rgba(120, 84, 60, ${0.6 * pulseIntensity})`;
-      ctx.lineWidth = 2;
-      ctx.setLineDash([5, 5]);
-      ctx.beginPath();
-      ctx.moveTo(previewX, 80);
-      ctx.lineTo(previewX, canvasHeight);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      
-      // Preview de la bola con efecto de respiración
-      const breathScale = 1 + 0.1 * Math.sin(Date.now() * 0.008);
-      const previewRadius = radius * breathScale;
-      
-      const img = images[nextLevel];
-      if (img && img.complete && img.naturalWidth > 0) {
-        ctx.save();
-        ctx.globalAlpha = 0.7;
+        if (gameOver || dropCooldown > 0) return;
+        
+        const canvasWidth = canvas.width / window.devicePixelRatio;
+        const canvasHeight = canvas.height / window.devicePixelRatio;
+        const radius = levelRadii[nextLevel];
+        
+        const pulseIntensity = 0.5 + 0.5 * Math.sin(Date.now() * 0.005);
+        ctx.strokeStyle = `rgba(120, 84, 60, ${0.6 * pulseIntensity})`;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(previewX, 80);
+        ctx.lineTo(previewX, canvasHeight);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        
+        const breathScale = 1 + 0.1 * Math.sin(Date.now() * 0.008);
+        const previewRadius = radius * breathScale;
+        
+        const img = currentTheme.images[nextLevel];
+        if (img && img.complete && img.naturalWidth > 0) {
+            ctx.save();
+            ctx.globalAlpha = 0.7;
+            ctx.beginPath();
+            ctx.arc(previewX, 80, previewRadius, 0, Math.PI * 2);
+            ctx.clip();
+            const size = previewRadius * 2;
+            ctx.drawImage(img, previewX - previewRadius, 80 - previewRadius, size, size);
+            ctx.restore();
+        } else {
+            ctx.fillStyle = levelColors[nextLevel - 1] + "80";
+            ctx.beginPath();
+            ctx.arc(previewX, 80, previewRadius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        const glowIntensity = 0.3 + 0.7 * Math.sin(Date.now() * 0.006);
+        ctx.shadowColor = levelColors[nextLevel - 1];
+        ctx.shadowBlur = 10 * glowIntensity;
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+        ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(previewX, 80, previewRadius, 0, Math.PI * 2);
-        ctx.clip();
-        const size = previewRadius * 2;
-        ctx.drawImage(img, previewX - previewRadius, 80 - previewRadius, size, size);
-        ctx.restore();
-      } else {
-        ctx.fillStyle = levelColors[nextLevel - 1] + "80";
-        ctx.beginPath();
-        ctx.arc(previewX, 80, previewRadius, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      
-      // Borde del preview con glow
-      const glowIntensity = 0.3 + 0.7 * Math.sin(Date.now() * 0.006);
-      ctx.shadowColor = levelColors[nextLevel - 1];
-      ctx.shadowBlur = 10 * glowIntensity;
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(previewX, 80, previewRadius, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.shadowBlur = 0;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
     }
 
     function updateParticles() {
-      particles = particles.filter(particle => {
-        particle.update();
-        return !particle.isDead();
-      });
+        particles = particles.filter(particle => {
+            particle.update();
+            return !particle.isDead();
+        });
     }
 
     function drawParticles() {
-      particles.forEach(particle => {
-        particle.draw(ctx);
-      });
+        particles.forEach(particle => {
+            particle.draw(ctx);
+        });
     }
 
     function loop() {
-      const canvasWidth = canvas.width / window.devicePixelRatio;
-      const canvasHeight = canvas.height / window.devicePixelRatio;
-      
-      // Screen shake
-      ctx.save();
-      if (screenShakeTimer > 0) {
-        const shakeX = (Math.random() - 0.5) * screenShakeIntensity;
-        const shakeY = (Math.random() - 0.5) * screenShakeIntensity;
-        ctx.translate(shakeX, shakeY);
-        screenShakeTimer--;
-        if (screenShakeTimer <= 0) {
-          screenShakeIntensity = 0;
-        }
-      }
-      
-      ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-      
-      if (dropCooldown > 0) dropCooldown--;
-      
-      // Dibujar zona de drop con gradiente animado
-      const gradient = ctx.createLinearGradient(0, 0, 0, 80);
-      const time = Date.now() * 0.002;
-      gradient.addColorStop(0, `rgba(255, 255, 255, ${0.1 + 0.1 * Math.sin(time)})`);
-      gradient.addColorStop(1, `rgba(255, 255, 255, ${0.2 + 0.1 * Math.sin(time + 1)})`);
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, canvasWidth, 80);
-      
-      // Línea de game over con efecto pulsante
-      const pulseLine = 3 + Math.sin(Date.now() * 0.01) * 1;
-      ctx.strokeStyle = "#996d4f";
-      ctx.lineWidth = pulseLine;
-      ctx.beginPath();
-      ctx.moveTo(0, 80);
-      ctx.lineTo(canvasWidth, 80);
-      ctx.stroke();
-
-      if (gameOver) {
-        ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
-        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+        const canvasWidth = canvas.width / window.devicePixelRatio;
+        const canvasHeight = canvas.height / window.devicePixelRatio;
         
-        // Efecto de texto parpadeante
-        const textAlpha = 0.5 + 0.5 * Math.sin(Date.now() * 0.005);
-        ctx.fillStyle = `rgba(255, 255, 255, ${textAlpha})`;
-        ctx.font = "32px sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText("Perdiste amor :c", canvasWidth / 2, canvasHeight / 2);
-        ctx.font = "18px sans-serif";
-        ctx.fillText("Toca para reiniciar", canvasWidth / 2, canvasHeight / 2 + 50);
-        ctx.restore();
-        return;
-      }
-
-      // Detectar fusiones
-      const indicesAEliminar = new Set();
-      const nuevosRMs = [];
-
-      for (let i = 0; i < rms.length; i++) {
-        for (let j = i + 1; j < rms.length; j++) {
-          if (indicesAEliminar.has(i) || indicesAEliminar.has(j)) continue;
-
-          const a = rms[i];
-          const b = rms[j];
-
-          if (detectarColision(a, b)) {
-            if (puedenFusionar(a, b)) {
-              indicesAEliminar.add(i);
-              indicesAEliminar.add(j);
-
-              const newLevel = a.level + 1;
-              const mergeX = (a.x + b.x) / 2;
-              const mergeY = Math.min(a.y, b.y);
-              
-              nuevosRMs.push({
-                x: mergeX,
-                y: mergeY,
-                vx: 0,
-                vy: -2,
-                level: newLevel,
-                isSettled: false,
-                settleTimer: 0,
-                mergeTimer: 0,
-                scale: 1.3, // Empieza más grande
-                targetScale: 1,
-                rotation: 0,
-                angularVelocity: (Math.random() - 0.5) * 0.2
-              });
-
-              // Efectos de fusión
-              playSound('merge');
-              addScreenShake(5, 15);
-              createParticleExplosion(mergeX, mergeY, levelColors[newLevel - 1], 20);
-              
-              // Partículas de los RMs que se fusionan
-              createParticleExplosion(a.x, a.y, levelColors[a.level - 1], 6);
-              createParticleExplosion(b.x, b.y, levelColors[b.level - 1], 6);
-
-              actualizarPuntaje(a.level * 20);
-            } else {
-              resolverColision(a, b);
-            }
-          }
-        }
-      }
-
-      Array.from(indicesAEliminar)
-        .sort((a, b) => b - a)
-        .forEach(index => rms.splice(index, 1));
-
-      rms.push(...nuevosRMs);
-
-      // Actualizar física
-      for (const rm of rms) {
-        const radius = levelRadii[rm.level] * rm.scale;
-        
-        rm.mergeTimer++;
-        rm.vy += gravity;
-        rm.x += rm.vx;
-        rm.y += rm.vy;
-        rm.vx *= friction;
-        
-        // Animación de escala
-        if (rm.scale !== rm.targetScale) {
-          rm.scale += (rm.targetScale - rm.scale) * 0.1;
-          if (Math.abs(rm.scale - rm.targetScale) < 0.01) {
-            rm.scale = rm.targetScale;
-          }
-        }
-
-        
-        // Colisión con paredes laterales
-        if (rm.x - radius <= 0) {
-          rm.x = radius;
-          rm.vx *= -bounceDamping;
-          rm.angularVelocity += Math.random() * 0.2 - 0.1;
-          createImpactParticles(rm.x, rm.y, levelColors[rm.level - 1], 0.5);
-        } else if (rm.x + radius >= canvasWidth) {
-          rm.x = canvasWidth - radius;
-          rm.vx *= -bounceDamping;
-          rm.angularVelocity += Math.random() * 0.2 - 0.1;
-          createImpactParticles(rm.x, rm.y, levelColors[rm.level - 1], 0.5);
-        }
-        
-        // Colisión con el suelo
-        if (rm.y + radius >= canvasHeight) {
-          rm.y = canvasHeight - radius;
-          rm.vy *= -bounceDamping;
-          rm.vx *= 0.9;
-          rm.angularVelocity += (Math.random() - 0.5) * 0.3;
-          
-          if (Math.abs(rm.vy) > 2) {
-            createImpactParticles(rm.x, rm.y + radius, levelColors[rm.level - 1], 5);
-            addScreenShake(1, 5);
-          }
-          
-          if (Math.abs(rm.vy) < 0.5) {
-            rm.vy = 0;
-          }
-        }
-        
-        // Determinar si está estable
-        if (Math.abs(rm.vx) < 0.5 && Math.abs(rm.vy) < 0.5) {
-          rm.settleTimer++;
-          if (rm.settleTimer > 60) {
-            rm.isSettled = true;
-          }
-        } else {
-          rm.settleTimer = 0;
-          rm.isSettled = false;
-        }
-        
-        // Game over
-        if (rm.y - radius <= 80 && rm.isSettled && rm.mergeTimer > 120) {
-          gameOver = true;
-          playSound('gameover');
-          addScreenShake(10, 30);
-          
-          // Efecto visual de game over
-          const gameContainer = document.getElementById("game-container");
-          gameContainer.classList.add("shake");
-          setTimeout(() => {
-            gameContainer.classList.remove("shake");
-          }, 300);
-        }
-        
-        // Dibujar RM con efectos mejorados
         ctx.save();
-        ctx.translate(rm.x, rm.y);
-        ctx.rotate(rm.rotation);
-        ctx.scale(rm.scale, rm.scale);
-        
-        const img = images[rm.level];
-        if (img && img.complete && img.naturalWidth > 0) {
-          // Sombra
-          ctx.shadowColor = "rgba(0, 0, 0, 0.3)";
-          ctx.shadowBlur = 5;
-          ctx.shadowOffsetY = 3;
-          
-          ctx.beginPath();
-          ctx.arc(0, 0, radius / rm.scale, 0, Math.PI * 2);
-          ctx.clip();
-          const size = (radius / rm.scale) * 2;
-          ctx.drawImage(img, -radius / rm.scale, -radius / rm.scale, size, size);
-          ctx.restore();
-          
-          // Borde brillante
-          ctx.save();
-          ctx.translate(rm.x, rm.y);
-          ctx.scale(rm.scale, rm.scale);
-          if (!rm.isSettled) {
-            ctx.shadowColor = levelColors[rm.level - 1];
-            ctx.shadowBlur = 8;
-          }
-          ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
-          ctx.lineWidth = 1.5 / rm.scale;
-          ctx.beginPath();
-          ctx.arc(0, 0, radius / rm.scale, 0, Math.PI * 2);
-          ctx.stroke();
-        } else {
-          // Sombra para colores fallback
-          ctx.shadowColor = "rgba(0, 0, 0, 0.3)";
-          ctx.shadowBlur = 5;
-          ctx.shadowOffsetY = 3;
-          
-          ctx.fillStyle = levelColors[rm.level - 1] || "#a78bfa";
-          ctx.beginPath();
-          ctx.arc(0, 0, radius / rm.scale, 0, Math.PI * 2);
-          ctx.fill();
-          
-          ctx.shadowBlur = 0;
-          ctx.strokeStyle = "white";
-          ctx.lineWidth = 2 / rm.scale;
-          ctx.beginPath();
-          ctx.arc(0, 0, radius / rm.scale, 0, Math.PI * 2);
-          ctx.stroke();
-          
-          ctx.fillStyle = "white";
-          ctx.font = `${Math.max(10, radius/3) / rm.scale}px sans-serif`;
-          ctx.textAlign = "center";
-          ctx.fillText(rm.level.toString(), 0, 4 / rm.scale);
+        if (screenShakeTimer > 0) {
+            const shakeX = (Math.random() - 0.5) * screenShakeIntensity;
+            const shakeY = (Math.random() - 0.5) * screenShakeIntensity;
+            ctx.translate(shakeX, shakeY);
+            screenShakeTimer--;
+            if (screenShakeTimer <= 0) {
+                screenShakeIntensity = 0;
+            }
         }
-        ctx.restore();
-      }
-      
-      // Actualizar y dibujar partículas
-      updateParticles();
-      drawParticles();
-      
-      dibujarPreview();
-      
-      // Indicador de estado con efectos
-      ctx.fillStyle = "rgba(64, 45, 32, 0.9)";
-      ctx.font = "16px sans-serif";
-      ctx.textAlign = "center";
-      
-      if (dropCooldown > 0) {
-        const cooldownAlpha = 0.5 + 0.5 * Math.sin(Date.now() * 0.01);
-        ctx.fillStyle = `rgba(64, 45, 32, ${cooldownAlpha})`;
-        ctx.fillText("Esperando...", canvasWidth / 2, 30);
-      } else {
-        const readyGlow = 0.7 + 0.3 * Math.sin(Date.now() * 0.008);
-        ctx.fillStyle = `rgba(64, 45, 32, ${readyGlow})`;
-        ctx.fillText("Toca para soltar", canvasWidth / 2, 30);
-      }
+        
+        ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+        
+        if (dropCooldown > 0) dropCooldown--;
+        
+        const gradient = ctx.createLinearGradient(0, 0, 0, 80);
+        const time = Date.now() * 0.002;
+        gradient.addColorStop(0, `rgba(255, 255, 255, ${0.1 + 0.1 * Math.sin(time)})`);
+        gradient.addColorStop(1, `rgba(255, 255, 255, ${0.2 + 0.1 * Math.sin(time + 1)})`);
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvasWidth, 80);
+        
+        const pulseLine = 3 + Math.sin(Date.now() * 0.01) * 1;
+        ctx.strokeStyle = "#996d4f";
+        ctx.lineWidth = pulseLine;
+        ctx.beginPath();
+        ctx.moveTo(0, 80);
+        ctx.lineTo(canvasWidth, 80);
+        ctx.stroke();
 
-      ctx.restore();
-      requestAnimationFrame(loop);
+        if (gameOver) {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+            
+            const textAlpha = 0.5 + 0.5 * Math.sin(Date.now() * 0.005);
+            ctx.fillStyle = `rgba(255, 255, 255, ${textAlpha})`;
+            ctx.font = "32px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("Perdiste amor :c", canvasWidth / 2, canvasHeight / 2);
+            ctx.font = "18px sans-serif";
+            ctx.fillText("Toca para reiniciar", canvasWidth / 2, canvasHeight / 2 + 50);
+            ctx.restore();
+            return;
+        }
+
+        const indicesAEliminar = new Set();
+        const nuevosRMs = [];
+
+        for (let i = 0; i < rms.length; i++) {
+            for (let j = i + 1; j < rms.length; j++) {
+                if (indicesAEliminar.has(i) || indicesAEliminar.has(j)) continue;
+
+                const a = rms[i];
+                const b = rms[j];
+
+                if (detectarColision(a, b)) {
+                    if (puedenFusionar(a, b)) {
+                        indicesAEliminar.add(i);
+                        indicesAEliminar.add(j);
+
+                        const newLevel = a.level + 1;
+                        const mergeX = (a.x + b.x) / 2;
+                        const mergeY = Math.min(a.y, b.y);
+                        
+                        nuevosRMs.push({
+                            x: mergeX,
+                            y: mergeY,
+                            vx: 0,
+                            vy: -2,
+                            level: newLevel,
+                            isSettled: false,
+                            settleTimer: 0,
+                            mergeTimer: 0,
+                            scale: 1.3,
+                            targetScale: 1,
+                            rotation: 0,
+                            angularVelocity: (Math.random() - 0.5) * 0.2
+                        });
+
+                        playSound('merge');
+                        addScreenShake(5, 15);
+                        createParticleExplosion(mergeX, mergeY, levelColors[newLevel - 1], 20);
+                        createParticleExplosion(a.x, a.y, levelColors[a.level - 1], 6);
+                        createParticleExplosion(b.x, b.y, levelColors[b.level - 1], 6);
+
+                        actualizarPuntaje(a.level * 20);
+                    } else {
+                        resolverColision(a, b);
+                    }
+                }
+            }
+        }
+
+        Array.from(indicesAEliminar)
+            .sort((a, b) => b - a)
+            .forEach(index => rms.splice(index, 1));
+
+        rms.push(...nuevosRMs);
+
+        for (const rm of rms) {
+            const radius = levelRadii[rm.level] * rm.scale;
+            
+            rm.mergeTimer++;
+            rm.vy += gravity;
+            rm.x += rm.vx;
+            rm.y += rm.vy;
+            rm.vx *= friction;
+            
+            if (rm.scale !== rm.targetScale) {
+                rm.scale += (rm.targetScale - rm.scale) * 0.1;
+                if (Math.abs(rm.scale - rm.targetScale) < 0.01) {
+                    rm.scale = rm.targetScale;
+                }
+            }
+
+            if (rm.x - radius <= 0) {
+                rm.x = radius;
+                rm.vx *= -bounceDamping;
+                rm.angularVelocity += Math.random() * 0.2 - 0.1;
+            } else if (rm.x + radius >= canvasWidth) {
+                rm.x = canvasWidth - radius;
+                rm.vx *= -bounceDamping;
+                rm.angularVelocity += Math.random() * 0.2 - 0.1;
+            }
+            
+            if (rm.y + radius >= canvasHeight) {
+                rm.y = canvasHeight - radius;
+                rm.vy *= -bounceDamping;
+                rm.vx *= 0.9;
+                rm.angularVelocity += (Math.random() - 0.5) * 0.3;
+                
+                if (Math.abs(rm.vy) < 0.5) {
+                    rm.vy = 0;
+                }
+            }
+            
+            if (Math.abs(rm.vx) < 0.5 && Math.abs(rm.vy) < 0.5) {
+                rm.settleTimer++;
+                if (rm.settleTimer > 60) {
+                    rm.isSettled = true;
+                }
+            } else {
+                rm.settleTimer = 0;
+                rm.isSettled = false;
+            }
+            
+            if (rm.y - radius <= 80 && rm.isSettled && rm.mergeTimer > 120) {
+                gameOver = true;
+                playSound('gameover');
+                addScreenShake(10, 30);
+                
+                const gameContainer = document.getElementById("game-container");
+                gameContainer.classList.add("shake");
+                setTimeout(() => {
+                    gameContainer.classList.remove("shake");
+                }, 300);
+            }
+            
+            ctx.save();
+            ctx.translate(rm.x, rm.y);
+            ctx.rotate(rm.rotation);
+            ctx.scale(rm.scale, rm.scale);
+            
+            const img = currentTheme.images[rm.level];
+            if (img && img.complete && img.naturalWidth > 0) {
+                ctx.shadowColor = "rgba(0, 0, 0, 0.3)";
+                ctx.shadowBlur = 5;
+                ctx.shadowOffsetY = 3;
+                
+                ctx.beginPath();
+                ctx.arc(0, 0, radius / rm.scale, 0, Math.PI * 2);
+                ctx.clip();
+                const size = (radius / rm.scale) * 2;
+                ctx.drawImage(img, -radius / rm.scale, -radius / rm.scale, size, size);
+                ctx.restore();
+                
+                ctx.save();
+                ctx.translate(rm.x, rm.y);
+                ctx.scale(rm.scale, rm.scale);
+                if (!rm.isSettled) {
+                    ctx.shadowColor = levelColors[rm.level - 1];
+                    ctx.shadowBlur = 8;
+                }
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+                ctx.lineWidth = 1.5 / rm.scale;
+                ctx.beginPath();
+                ctx.arc(0, 0, radius / rm.scale, 0, Math.PI * 2);
+                ctx.stroke();
+            } else {
+                ctx.shadowColor = "rgba(0, 0, 0, 0.3)";
+                ctx.shadowBlur = 5;
+                ctx.shadowOffsetY = 3;
+                
+                ctx.fillStyle = levelColors[rm.level - 1] || "#a78bfa";
+                ctx.beginPath();
+                ctx.arc(0, 0, radius / rm.scale, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = "white";
+                ctx.lineWidth = 2 / rm.scale;
+                ctx.beginPath();
+                ctx.arc(0, 0, radius / rm.scale, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                ctx.fillStyle = "white";
+                ctx.font = `${Math.max(10, radius/3) / rm.scale}px sans-serif`;
+                ctx.textAlign = "center";
+                ctx.fillText(rm.level.toString(), 0, 4 / rm.scale);
+            }
+            ctx.restore();
+        }
+        
+        updateParticles();
+        drawParticles();
+        
+        dibujarPreview();
+        
+        ctx.fillStyle = "rgba(64, 45, 32, 0.9)";
+        ctx.font = "16px sans-serif";
+        ctx.textAlign = "center";
+        
+        if (dropCooldown > 0) {
+            const cooldownAlpha = 0.5 + 0.5 * Math.sin(Date.now() * 0.01);
+            ctx.fillStyle = `rgba(64, 45, 32, ${cooldownAlpha})`;
+            ctx.fillText("Esperando...", canvasWidth / 2, 30);
+        } else {
+            const readyGlow = 0.7 + 0.3 * Math.sin(Date.now() * 0.008);
+            ctx.fillStyle = `rgba(64, 45, 32, ${readyGlow})`;
+            ctx.fillText("Toca para soltar", canvasWidth / 2, 30);
+        }
+
+        ctx.restore();
+        requestAnimationFrame(loop);
     }
 
     canvas.addEventListener("click", function(e) {
-      if (gameOver) {
-        reiniciar();
-      }
+        if (gameOver) {
+            reiniciar();
+        }
     });
 
     canvas.addEventListener("touchstart", function(e) {
-      if (gameOver) {
-        reiniciar();
-        e.preventDefault();
-      }
+        if (gameOver) {
+            reiniciar();
+            e.preventDefault();
+        }
     });
 
     document.getElementById("restart-btn").addEventListener("click", reiniciar);
 
     function reiniciar() {
-      rms.length = 0;
-      particles.length = 0;
-      score = 0;
-      gameOver = false;
-      dropCooldown = 0;
-      screenShakeTimer = 0;
-      screenShakeIntensity = 0;
-      nextLevel = generarProximoNivel();
-      const canvasWidth = canvas.width / window.devicePixelRatio;
-      previewX = canvasWidth / 2;
-      document.getElementById("score").textContent = "Puntaje: 0";
-      
-      // Efecto de reinicio
-      createParticleExplosion(canvasWidth / 2, canvas.height / window.devicePixelRatio / 2, "#ffffff", 25);
-      
-      // Remover clases de animación
-      const gameContainer = document.getElementById("game-container");
-      const scoreContainer = document.getElementById("score-container");
-      gameContainer.classList.remove("shake");
-      scoreContainer.classList.remove("score-popup");
+        rms.length = 0;
+        particles.length = 0;
+        score = 0;
+        gameOver = false;
+        dropCooldown = 0;
+        screenShakeTimer = 0;
+        screenShakeIntensity = 0;
+        nextLevel = generarProximoNivel();
+        const canvasWidth = canvas.width / window.devicePixelRatio;
+        previewX = canvasWidth / 2;
+        document.getElementById("score").textContent = "Puntaje: 0";
+        
+        createParticleExplosion(canvasWidth / 2, canvas.height / window.devicePixelRatio / 2, "#ffffff", 25);
+        
+        const gameContainer = document.getElementById("game-container");
+        const scoreContainer = document.getElementById("score-container");
+        gameContainer.classList.remove("shake");
+        scoreContainer.classList.remove("score-popup");
+
+        rewardsShown = []; // <-- Añade esta línea para resetear las recompensas
     }
 
-    // Configuración inicial y manejo de resize
+    // Configuración inicial
     window.addEventListener('resize', () => {
-      setupCanvas();
+        setupCanvas();
     });
 
     window.addEventListener('orientationchange', () => {
-      setTimeout(setupCanvas, 100);
+        setTimeout(setupCanvas, 100);
     });
 
+    function setupCanvas() {
+        const container = canvas.parentElement;
+        const containerRect = container.getBoundingClientRect();
+        
+        canvas.width = Math.floor(containerRect.width * window.devicePixelRatio);
+        canvas.height = Math.floor(containerRect.height * window.devicePixelRatio);
+        
+        canvas.style.width = containerRect.width + 'px';
+        canvas.style.height = containerRect.height + 'px';
+        
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        
+        canvasRect = canvas.getBoundingClientRect();
+        previewX = containerRect.width / 2;
+    }
+
     // Inicializar
+    setupRewardListeners(); // <-- Añade esta línea
     setupCanvas();
     nextLevel = generarProximoNivel();
-    loop();
-  </script>
+    loop(); 
+</script>
 </body>
 </html>
