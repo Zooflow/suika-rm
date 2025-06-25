@@ -433,8 +433,8 @@ document.getElementById('my-theme').addEventListener('click', () => {
 
     // Física del juego
     const gravity = 0.4;
-    const friction = 0.98;
-    const bounceDamping = 0.3;
+    const friction = 0.95;
+    const bounceDamping = 0.5;
 
     const levelRadii = {
         1: 16, 2: 22, 3: 28, 4: 35, 5: 42, 6: 50, 7: 58
@@ -754,12 +754,12 @@ function setupRewardListeners() {
     canvas.addEventListener("touchstart", soltarRM, { passive: false });
 
     function detectarColision(a, b) {
-        const dx = a.x - b.x;
+    const dx = a.x - b.x;
         const dy = a.y - b.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         const radiusA = levelRadii[a.level] * a.scale;
         const radiusB = levelRadii[b.level] * b.scale;
-        return distance < (radiusA + radiusB - 2);
+        return distance < (radiusA + radiusB) * 0.9; // Cambiado de -2 a *0.9
     }
 
     function resolverColision(a, b) {
@@ -785,7 +785,7 @@ function setupRewardListeners() {
         const nx = dx / distance;
         const ny = dy / distance;
         
-        const separacion = overlap * 0.5;
+        const separacion = overlap * 0.7;
         a.x += nx * separacion;
         a.y += ny * separacion;
         b.x -= nx * separacion;
@@ -813,15 +813,15 @@ function setupRewardListeners() {
     }
 
     function puedenFusionar(a, b) {
-        return a.level === b.level && 
-               a.level < maxLevel && 
-               a.mergeTimer > 5 && 
-               b.mergeTimer > 5 &&
-               Math.abs(a.vx) < 3 && 
-               Math.abs(a.vy) < 3 &&
-               Math.abs(b.vx) < 3 && 
-               Math.abs(b.vy) < 3;
-    }
+    return a.level === b.level && 
+           a.level < maxLevel && 
+           a.mergeTimer > 5 && 
+           b.mergeTimer > 5 &&
+           Math.abs(a.vx) < 5 && // Aumentado de 3 a 5
+           Math.abs(a.vy) < 5 && // Aumentado de 3 a 5
+           Math.abs(b.vx) < 5 && // Aumentado de 3 a 5
+           Math.abs(b.vy) < 5;   // Aumentado de 3 a 5
+}
 
     function dibujarPreview() {
         if (gameOver || dropCooldown > 0) return;
